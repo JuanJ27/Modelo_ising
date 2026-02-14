@@ -205,3 +205,33 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# ==============================================================================
+# LaTeX (Essential for your Foundations folder)
+# ==============================================================================
+*.aux
+*.log
+*.nav
+*.out
+*.snm
+*.toc
+*.vrb
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.blg
+*.bbl
+
+# ==============================================================================
+# C++ and Build Systems (Essential for High-Performance folder)
+# ==============================================================================
+*.o
+*.obj
+*.exe
+*.out
+*.app
+*.so
+*.dll
+*.dylib
+build/
+bin/

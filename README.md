@@ -1,8 +1,10 @@
 # Ising-Dynamics 🧲 📈
-[Leer en Español 🇪🇸](./README.es.md)
+
 **Bridging Theoretical Physics and Financial Intelligence through High-Performance Computing.**
 
 ---
+
+[Leer en Español 🇪🇸](./README.es.md)
 
 ## 💡 The Concept
 This project explores the universality of the **Ising Model**, evolving from a classical Statistical Mechanics simulation into a high-performance engine for financial market analysis. It demonstrates the transition from academic research to industrial application.

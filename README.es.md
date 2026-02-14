@@ -1,8 +1,10 @@
 # Ising-Dynamics 🧲 📈
-[Read in English 🇺🇸](./README.md)
+
 **Uniendo la Física Teórica y la Inteligencia Financiera mediante Computación de Alto Rendimiento.**
 
 ---
+
+[Read in English 🇺🇸](./README.md)
 
 ## 💡 El Concepto
 Este proyecto explora la universalidad del **Modelo de Ising**, evolucionando desde una simulación clásica de Mecánica Estadística hacia un motor de alto rendimiento para el análisis de mercados financieros. Demuestra la transición de la investigación académica a la aplicación industrial.

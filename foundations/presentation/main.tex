@@ -1,0 +1,518 @@
+\documentclass[aspectratio=169]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{xcolor}
+
+% Tema y colores
+\usetheme{Madrid}
+\usecolortheme{default}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{caption}[numbered]
+
+% Definir colores personalizados
+\definecolor{udea}{RGB}{0,102,51}
+\setbeamercolor{structure}{fg=udea}
+\setbeamercolor{title}{fg=white,bg=udea}
+\setbeamercolor{frametitle}{fg=white,bg=udea}
+\setbeamercolor{titlelike}{fg=white,bg=udea}
+\setbeamercolor{author}{fg=black}
+\setbeamercolor{institute}{fg=black}
+\setbeamercolor{date}{fg=black}
+
+% Información del documento
+\title[Modelo de Ising - Monte Carlo]{Simulación Monte Carlo del Modelo de Ising en Diferentes Tipos de Redes}
+\author[]{Juan Montoya \& Melanny Silva \& Pablo Sánchez}
+\institute[UdeA]{Instituto de Física\\Universidad de Antioquia}
+\date{\today}
+
+\begin{document}
+
+%===============================================================================
+% DIAPOSITIVA 1: PORTADA
+%===============================================================================
+\begin{frame}
+\titlepage
+\end{frame}
+
+%===============================================================================
+% DIAPOSITIVA 2: CONTENIDO
+%===============================================================================
+\begin{frame}{Contenido}
+\tableofcontents
+\end{frame}
+
+%===============================================================================
+% DIAPOSITIVA 3: INTRODUCCIÓN
+%===============================================================================
+\section{Introducción}
+\begin{frame}{Introducción}
+\begin{block}{Modelo de Ising}
+Sistema magnético con espines $S_i = \pm 1$ que pueden orientarse en dos direcciones opuestas
+\end{block}
+
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{Importancia:}
+\begin{itemize}
+\item Transiciones de fase
+\item Magnetización espontánea
+\end{itemize}
+
+\column{0.5\textwidth}
+\textbf{Soluciones analíticas:}
+\begin{itemize}
+\item 1D: No hay transición (Ising, 1925)
+\item 2D cuadrada: (Onsager, 1944)
+\item Otros casos: Métodos numéricos
+\end{itemize}
+\end{columns}
+
+\vspace{0.1cm}
+\begin{alertblock}{Objetivo}
+Estudiar el modelo de Ising en diferentes topologías de red (z=2,3,4,8) con dilución magnética usando Monte Carlo
+\end{alertblock}
+\end{frame}
+
+%===============================================================================
+% DIAPOSITIVA 4: MARCO TEÓRICO - HAMILTONIANO
+%===============================================================================
+\section{Marco Teórico}
+\begin{frame}{Marco Teórico: Hamiltoniano}
+\begin{block}{Hamiltoniano del Modelo de Ising}
+$$H = -J \sum_{\langle i,j \rangle} S_i S_j - H \sum_i S_i$$
+\end{block}
+
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{Parámetros:}
+\begin{itemize}
+\item $S_i = \pm 1$: espín en sitio $i$
+\item $J$: constante de acoplamiento
+\item $H$: campo magnético externo
+\item $\langle i,j \rangle$: primeros vecinos
+\end{itemize}
+
+\column{0.5\textwidth}
+\textbf{Casos de estudio:}
+\begin{itemize}
+\item \textcolor{blue}{Paramagneto}: $J=0$
+\item \textcolor{red}{Ferromagneto}: $J>0$
+\end{itemize}
+
+\vspace{0.01cm}
+\textbf{Magnetización:}
+$$m = \frac{1}{n} \sum_i S_i$$
+\end{columns}
+
+\vspace{0.05cm}
+\begin{exampleblock}{Dilución magnética}
+Factor $q = n/N$: fracción de sitios ocupados ($q = 0, 0\text{.}5, 0\text{.}8$)
+\end{exampleblock}
+\end{frame}
+
+%===============================================================================
+% DIAPOSITIVA 5: MÉTODO MONTE CARLO
+%===============================================================================
+\begin{frame}{Método Monte Carlo - Algoritmo de Metropolis}
+\begin{block}{Distribución de Boltzmann}
+$$P(\mu) \propto e^{-\beta E_\mu}, \quad \beta = \frac{1}{k_B T}$$
+\end{block}
+
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{Algoritmo de Metropolis:}
+\begin{enumerate}
+\item Seleccionar espín aleatorio
+\item Calcular $\Delta E$ al invertir espín
+\item Si $\Delta E \leq 0$: aceptar
+\item Si $\Delta E > 0$: aceptar con
+$P = e^{-\beta \Delta E}$
+\item Repetir hasta equilibrio
+\end{enumerate}
+
+\column{0.5\textwidth}
+\textbf{Parámetros de simulación:}
+\begin{itemize}
+\item $L$: tamaño de red
+\item Pasos MC: 4000-10000
+\item Condiciones periódicas
+\item Optimización: Numba JIT
+\end{itemize}
+\end{columns}
+
+\vspace{0.01cm}
+\begin{alertblock}{Ley de estados correspondientes (Paramagneto)}
+$$m = \tanh\left(\frac{H}{k_B T}\right)$$
+\end{alertblock}
+\end{frame}
+
+%===============================================================================
+% DIAPOSITIVA 6B: VISUALIZACIÓN DE TOPOLOGÍAS
+%===============================================================================
+\begin{frame}{Visualización de las Topologías de Red}
+\begin{center}
+\includegraphics[width=0.6\textwidth]{topo.png}
+\end{center}
+
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{Estructuras 1D y 2D:}
+\begin{itemize}
+\item \textbf{(A) Cadena 1D}: $z=2$ vecinos
+\item \textbf{(B) Red Cuadrada}: $z=4$ vecinos
+\item \textbf{(C) Red Hexagonal}: $z=3$ vecinos
+\end{itemize}
+
+\column{0.5\textwidth}
+\textbf{Estructura 3D:}
+\begin{itemize}
+\item \textbf{(D) Red BCC}: $z=8$ vecinos
+\end{itemize}
+
+\vspace{0.3cm}
+\textbf{Código de colores:}
+\begin{itemize}
+\item \textcolor{orange}{Naranja}: sitio central
+\item \textcolor{yellow}{Amarillo}: vecinos
+\item Azul: otros sitios
+\end{itemize}
+\end{columns}
+
+\end{frame}
+
+%===============================================================================
+% DIAPOSITIVA 6: TOPOLOGÍAS DE RED
+%===============================================================================
+\section{Implementación y Topologías}
+\begin{frame}{Topologías de Red Estudiadas}
+\begin{center}
+\begin{tabular}{cccc}
+\toprule
+\textbf{Topología} & \textbf{Dimensión} & \textbf{z} & \textbf{Tamaño (L)} \\
+\midrule
+Cadena 1D & 1D & 2 & 100 \\
+Hexagonal (Honeycomb) & 2D & 3 & 30 \\
+Cuadrada & 2D & 4 & 30 \\
+BCC (Cúbica Centrada) & 3D & 8 & 15 \\
+\bottomrule
+\end{tabular}
+\end{center}
+\begin{center}
+    \textbf{Características:}
+    \begin{itemize}
+    \item Condiciones de frontera periódicas
+    \item $z$ = número de coordinación
+    \item Impacto en $T_c$
+    \item Dilución: $q \in \{0, 0\text{.}5, 0\text{.}8\}$
+    \end{itemize}
+\end{center}
+\end{frame}
+
+%===============================================================================
+% DIAPOSITIVA 7: RESULTADOS PARAMAGNETISMO - CURVAS m vs H
+%===============================================================================
+\section{Resultados: Paramagnetismo}
+\begin{frame}{Paramagnetismo (J=0): Curvas m vs. H}
+\begin{columns}[T]
+\column{0.6\textwidth}
+\vspace{-0.8cm}
+\begin{center}
+\includegraphics[width = 0.75\textwidth]{mH.png}
+\end{center}
+
+\column{0.4\textwidth}
+\textbf{Observaciones:}
+\begin{itemize}
+\item Curvas para $T_1 < T_2 < T_3$
+\item Mayor T $\Rightarrow$ respuesta más lineal
+\end{itemize}
+
+\vspace{0.3cm}
+\textbf{Validación cuantitativa:}
+\begin{itemize}
+\item $R^2 > 0.99999$ con teoría
+\end{itemize}
+\end{columns}
+
+\end{frame}
+
+%===============================================================================
+% DIAPOSITIVA 8: LEY DE ESTADOS CORRESPONDIENTES
+%===============================================================================
+\begin{frame}{Ley de Estados Correspondientes}
+\begin{columns}[T]
+\column{0.6\textwidth}
+\vspace{-0.75cm}
+\begin{center}
+\includegraphics[width =\textwidth]{mHT.png}
+\end{center}
+
+\column{0.4\textwidth}
+\textbf{Verificación:}
+\begin{itemize}
+\item Todas las curvas se ajustan
+\item $m = \tanh(H/T)$
+\item Válido para todas las $T$
+\item Independiente de topología
+\end{itemize}
+
+\vspace{0.3cm}
+\textbf{Métricas:}
+\begin{itemize}
+\item $R^2$: 0.999995
+\end{itemize}
+\end{columns}
+\end{frame}
+
+%===============================================================================
+% DIAPOSITIVA 13: EFECTO DEL NÚMERO DE COORDINACIÓN
+%===============================================================================
+\section{Análisis y Discusión}
+\begin{frame}{Efecto del Número de Coordinación (z)}
+\begin{columns}[T]
+\column{0.7\textwidth}
+\vspace{-0.6cm}
+\begin{center}
+\includegraphics[width = \textwidth]{zq.png}
+\end{center}
+
+\column{0.3\textwidth}
+
+\end{columns}
+\end{frame}
+
+
+%===============================================================================
+% DIAPOSITIVA 9: RELAJACIÓN ENERGÉTICA
+%===============================================================================
+\begin{frame}{Relajación del Sistema: Energía vs. Pasos MC}
+\begin{columns}[T]
+\column{0.6\textwidth}
+\vspace{-0.8cm}
+\begin{center}
+\includegraphics[width = \textwidth]{UMC.png}
+\end{center}
+
+\column{0.4\textwidth}
+\textbf{Análisis de equilibración:}
+\begin{itemize}
+\item Estado inicial: aleatorio
+\item Fluctuaciones térmicas
+\item Convergente
+\end{itemize}
+
+\vspace{0.3cm}
+\textbf{Comportamiento:}
+\begin{itemize}
+\item Mayor $z$ $\Rightarrow$ $|E|$ mayor
+\end{itemize}
+\end{columns}
+
+\end{frame}
+
+%===============================================================================
+% DIAPOSITIVA 9: ERGONOCIDAD
+%===============================================================================
+\begin{frame}{Relajación del Sistema: Energía vs. Pasos MC - Ergonocidad}
+\begin{columns}[T]
+\column{0.6\textwidth}
+\vspace{-0.8cm}
+\begin{center}
+\includegraphics[width = \textwidth]{Ergo.png}
+\end{center}
+
+\column{0.4\textwidth}
+\textbf{Análisis de equilibración:}
+\begin{itemize}
+\item Estado inicial: aleatorio
+\item Fluctuaciones térmicas
+\item Convergente
+\end{itemize}
+
+\vspace{0.3cm}
+\textbf{Comportamiento:}
+\begin{itemize}
+\item Mayor $z$ $\Rightarrow$ $|E|$ mayor
+\end{itemize}
+\end{columns}
+
+\end{frame}
+
+
+%===============================================================================
+% DIAPOSITIVA 10: RESULTADOS FERROMAGNETISMO - HISTÉRESIS
+%===============================================================================
+\section{Resultados: Ferromagnetismo}
+\begin{frame}{Ferromagnetismo (J=1): Ciclos de Histéresis}
+
+\begin{center}
+\includegraphics[width = 0.65\textwidth]{Hyz=3.png}
+\end{center}
+
+\end{frame}
+
+\section{Resultados: Ferromagnetismo}
+\begin{frame}{Ferromagnetismo (J=1): Ciclos de Histéresis}
+\begin{center}
+\includegraphics[width = 0.65\textwidth]{Hyz=4.png}
+\end{center}
+
+
+
+\end{frame}
+
+%===============================================================================
+% DIAPOSITIVA 11: MAGNETIZACIÓN VS TEMPERATURA
+%===============================================================================
+\begin{frame}{Magnetización vs. Temperatura: Transición de Fase}
+\begin{columns}[T]
+\column{0.65\textwidth}
+\vspace{-0.8cm}
+\begin{center}
+\includegraphics[width = 1.01\textwidth]{TC.png}
+\end{center}
+
+\column{0.35\textwidth}
+\textbf{Observacion:}
+\begin{itemize}
+\item $T_c$ depende de $z$ y $q$
+\end{itemize}
+
+\vspace{0.3cm}
+\textbf{Temperaturas críticas:}
+\begin{itemize}
+\item $z=2$ (1D): No transición
+\item $z=3$: $T_c \approx 1.0$
+\item $z=4$: $T_c \approx 2.27$
+\item $z=8$: $T_c \approx 6.3$
+\end{itemize}
+\end{columns}
+
+\end{frame}
+
+%===============================================================================
+% DIAPOSITIVA 13: EFECTO DEL NÚMERO DE COORDINACIÓN
+%===============================================================================
+\section{Análisis y Discusión}
+\begin{frame}{Efecto del Número de Coordinación (z)}
+\begin{columns}[T]
+\column{0.7\textwidth}
+\vspace{-0.6cm}
+\begin{center}
+\includegraphics[width = \textwidth]{zqJ.png}
+\end{center}
+
+\column{0.3\textwidth}
+\textbf{Resultados ($q=0.8$):}
+\begin{itemize}
+\item $z=2$: Sin transición
+\item $z=3$: $T_c \sim 1.0$
+\item $z=4$: $T_c \sim 2.27$
+\item $z=8$: $T_c \sim 6.3$
+\end{itemize}
+
+\end{columns}
+\end{frame}
+
+%===============================================================================
+% DIAPOSITIVA 12: MICROESTADOS MAGNÉTICOS
+%===============================================================================
+\begin{frame}{Microestados Magnéticos (Snapshots)}
+\begin{columns}[T]
+\column{0.55\textwidth}
+\vspace{-0.8cm}
+\begin{center}
+\includegraphics[width = \textwidth]{Microesta_Cuad2D.png}
+\end{center}
+
+\column{0.45\textwidth}
+\textbf{Configuraciones:}
+\begin{itemize}
+\item \textcolor{red}{$\uparrow$}: espín arriba (rojo)
+\item \textcolor{blue}{$\downarrow$}: espín abajo (azul)
+\item Blanco: sitio desocupado ($q<1$)
+\end{itemize}
+
+\vspace{0.3cm}
+\textbf{Análisis visual:}
+\begin{itemize}
+\item $T \ll T_c$: Dominios grandes
+\item $T \gg T_c$: Configuración aleatoria
+\end{itemize}
+\end{columns}
+
+\end{frame}
+
+%===============================================================================
+% DIAPOSITIVA 15: CONCLUSIONES
+%===============================================================================
+\section{Conclusiones}
+\begin{frame}{Conclusiones}
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{Paramagnetismo (J=0):}
+\begin{itemize}
+\item Verificación de $m = \tanh(H/T)$
+\item $R^2 > 0.99999$
+\item Ley de estados correspondientes confirmada
+\item Independiente de $z$ y $q$
+\end{itemize}
+
+\vspace{0.3cm}
+\textbf{Ferromagnetismo (J=1):}
+\begin{itemize}
+\item Transiciones de fase de 2º orden
+\item $T_c$ aumenta con $z$
+\item $T_c$ disminuye con dilución
+\item $T_c$(z=4) $\approx$ 2.27 
+\end{itemize}
+
+\column{0.5\textwidth}
+\textbf{Histéresis:}
+\begin{itemize}
+\item Desaparecen para $T > T_c$
+\item Comportamiento físico correcto
+\end{itemize}
+
+\vspace{0.3cm}
+\textbf{Implementación:}
+\begin{itemize}
+\item 4 topologías: z=2,3,4,8
+\item Algoritmo de Metropolis
+\item Optimización con Numba
+\end{itemize}
+\end{columns}
+
+\end{frame}
+
+
+%===============================================================================
+% DIAPOSITIVA 10: Entro
+%===============================================================================
+\section{Extras}
+\begin{frame}{Entropía}
+
+\begin{center}
+\includegraphics[width = 0.65\textwidth]{S.png}
+\end{center}
+
+\end{frame}
+
+
+
+%===============================================================================
+% DIAPOSITIVA FINAL: PREGUNTAS
+%===============================================================================
+\begin{frame}[plain]
+\begin{center}
+\vspace{1cm}
+\Large{Gracias por su atención}
+\end{center}
+\end{frame}
+
+\end{document}

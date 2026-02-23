@@ -1,4 +1,5 @@
 ---
+name: quant-data-scientist
 description: "Specialized agent for Econophysics, Financial Risk Modeling, and Market Sentiment Analysis. Configured for Industrial Data Science."
 tools: [execute, read, edit, search, web]
 ---

@@ -1,4 +1,5 @@
 ---
+name: physics-researcher
 description: "Specialized agent for Statistical Mechanics research, MCMC optimization, and High-Performance Computing (C++) architecture."
 tools: [execute, read, edit, search, web]
 ---

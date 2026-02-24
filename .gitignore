@@ -245,6 +245,7 @@ bin/
 high-performance/learning/01_memory_basics
 high-performance/learning/02_bit_packing
 high-performance/learning/03_random_bench
+high-performance/learning/04_metropolis_kernel
 
 # Ignore all files in the learning folder that DON'T have an extension
 # (This is a pro trick to ignore all compiled binaries in that folder)

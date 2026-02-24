@@ -235,3 +235,9 @@ __marimo__/
 *.dylib
 build/
 bin/
+
+# Ignore local VS Code settings
+.vscode/
+
+# Ignore compiled binaries (executables)
+high-performance/learning/01_memory_basics

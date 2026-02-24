@@ -3,6 +3,7 @@
 #include <array>
 #include <cassert>
 #include <cstdint>
+#include <stdexcept>
 #include <vector>
 
 /**
@@ -49,18 +50,9 @@ public:
      * @param topology Topology selector (currently Square2D is implemented).
      * @param initial_spin Initial spin value; non-negative -> +1, negative -> -1.
      */
-    explicit IsingLattice(int linear_size,
-                          Topology topology = Topology::Square2D,
-                          int8_t initial_spin = +1)
-        : linear_size_(linear_size),
-          site_count_(linear_size > 0 ? linear_size * linear_size : 0),
-          topology_(topology),
-          coordination_number_(coordination_for(topology)),
-          spins_(site_count_, initial_spin >= 0 ? int8_t(+1) : int8_t(-1)),
-          neighbors_(site_count_ * coordination_number_, 0) {
-        assert(linear_size_ > 0);
-        build_neighbor_table();
-    }
+        explicit IsingLattice(int linear_size,
+                                                    Topology topology = Topology::Square2D,
+                                                    int8_t initial_spin = +1);
 
     /** @brief Returns linear size L. */
     [[nodiscard]] int linear_size() const noexcept { return linear_size_; }
@@ -77,39 +69,49 @@ public:
     /**
      * @brief Read spin at lattice coordinate (i,j), applying periodic boundaries.
      */
-    [[nodiscard]] int8_t get_spin(int i, int j) const noexcept {
-        return spins_[index_2d(i, j)];
-    }
+    [[nodiscard]] int8_t get_spin(int i, int j) const noexcept;
 
     /**
      * @brief Flip spin at lattice coordinate (i,j): +1 <-> -1.
      */
-    void flip_spin(int i, int j) noexcept {
-        const int site = index_2d(i, j);
-        spins_[site] = static_cast<int8_t>(-spins_[site]);
-    }
+    void flip_spin(int i, int j) noexcept;
 
     /**
      * @brief Optional setter for initialization/protocol use (+1 or -1 normalization).
      */
-    void set_spin(int i, int j, int8_t value) noexcept {
-        spins_[index_2d(i, j)] = (value >= 0) ? int8_t(+1) : int8_t(-1);
-    }
+    void set_spin(int i, int j, int8_t value) noexcept;
 
     /**
      * @brief Sum nearest-neighbor spins around (i,j), using precomputed neighbor table.
      *
      * For Square2D this returns s_up + s_down + s_left + s_right.
      */
-    [[nodiscard]] int get_neighbor_sum(int i, int j) const noexcept {
-        const int site = index_2d(i, j);
-        int sum = 0;
-        const int base = site * coordination_number_;
-        for (int k = 0; k < coordination_number_; ++k) {
-            sum += static_cast<int>(spins_[neighbors_[base + k]]);
-        }
-        return sum;
-    }
+    [[nodiscard]] int get_neighbor_sum(int i, int j) const noexcept;
+
+    /**
+     * @brief Read spin by linear site index [0, N).
+     */
+    [[nodiscard]] int8_t get_spin_by_site(int site) const noexcept { return spins_[site]; }
+
+    /**
+     * @brief Flip spin by linear site index [0, N).
+     */
+    void flip_spin_by_site(int site) noexcept { spins_[site] = static_cast<int8_t>(-spins_[site]); }
+
+    /**
+     * @brief Sum nearest-neighbor spins by linear site index [0, N).
+     */
+    [[nodiscard]] int get_neighbor_sum_by_site(int site) const noexcept;
+
+    /**
+     * @brief Convert linear site index to row coordinate.
+     */
+    [[nodiscard]] int row_from_site(int site) const noexcept { return site / linear_size_; }
+
+    /**
+     * @brief Convert linear site index to column coordinate.
+     */
+    [[nodiscard]] int col_from_site(int site) const noexcept { return site % linear_size_; }
 
 private:
     int linear_size_;
@@ -138,38 +140,8 @@ private:
         return wrap(i) * linear_size_ + wrap(j);
     }
 
-    void build_neighbor_table() noexcept {
-        switch (topology_) {
-            case Topology::Square2D:
-                build_square_2d_neighbors();
-                return;
-            case Topology::Chain1D:
-            case Topology::BCC3D:
-                // Placeholder until dedicated builders are added in Phase 2.x.
-                // Keeps interface stable while signaling clear extension points.
-                build_square_2d_neighbors();
-                return;
-            default:
-                build_square_2d_neighbors();
-                return;
-        }
-    }
-
-    void build_square_2d_neighbors() noexcept {
-        assert(coordination_number_ == 4);
-
-        for (int i = 0; i < linear_size_; ++i) {
-            for (int j = 0; j < linear_size_; ++j) {
-                const int site = index_2d(i, j);
-                const int base = site * coordination_number_;
-
-                neighbors_[base + 0] = index_2d(i - 1, j); // up
-                neighbors_[base + 1] = index_2d(i + 1, j); // down
-                neighbors_[base + 2] = index_2d(i, j - 1); // left
-                neighbors_[base + 3] = index_2d(i, j + 1); // right
-            }
-        }
-    }
+    void build_neighbor_table();
+    void build_square_2d_neighbors();
 };
 
 } // namespace ising::hp

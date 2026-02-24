@@ -19,11 +19,16 @@ Este proyecto explora la universalidad del **Modelo de Ising**, evolucionando de
     *   [Reporte Científico Completo (PDF)](./foundations/report/Ising_model_Report.pdf)
     *   [Presentación Técnica (Fuente LaTeX incluida)](./foundations/presentation/presentation.pdf)
 
-### [v2.0] Motor de Alto Rendimiento (En progreso)
-*Enfoque en Ingeniería de Software y Eficiencia Computacional.*
-*   **Objetivo:** Migrar el núcleo de la simulación a **C++20** para lograr una aceleración de más de 100x.
-*   **Características:** Empaquetamiento de bits (almacenando 64 espines por entero), aleatoriedad de alta calidad con Mersenne Twister (MT19937) e integración híbrida Python/C++.
-*   **Habilidad Destacada:** Gestión de memoria de bajo nivel y patrones de Computación de Alto Rendimiento (HPC).
+### [v1.8 / v2.0] Motor de Alto Rendimiento (En progreso)
+*Transición del prototipo a ingeniería de computación de alto rendimiento (HPC).*
+*   **Estado:** Kernels fundamentales completados. Actualmente diseñando la arquitectura modular de la librería.
+*   **Hito de Rendimiento:** Validada una **aceleración de 989x** (~50 ns/flip) en comparación con la implementación original en Python.
+*   **Características Clave:** 
+    *   **Arquitectura de Memoria:** Diseño 1D contiguo para una localidad de caché L1/L2 óptima.
+    *   **Empaquetamiento de Bits:** Compresión de memoria 64:1 mediante primitivas bitwise (SET/GET/XOR).
+    *   **Aleatoriedad Científica:** Integración de `std::mt19937_64` (Mersenne Twister) para simulaciones de largo periodo y alta entropía.
+    *   **Eficiencia:** Implementación de **Tablas de Búsqueda (LUT)** de Boltzmann para eliminar cálculos trascendentales costosos.
+*   **Estándar:** Escrito en **C++17** enfocado en Diseño Orientado a Datos (DOD).
 
 ### [v3.0] Econofísica: Análisis de Sentimiento de Mercado (Planeado)
 *Dirigido a aplicaciones en la industria financiera (Bancolombia Talento B).*
@@ -36,7 +41,8 @@ Este proyecto explora la universalidad del **Modelo de Ising**, evolucionando de
 ## 🛠 Stack Tecnológico
 - **Lenguajes:** Python (Análisis de Datos), C++ (Motor de Simulación), LaTeX (Documentación).
 - **Librerías:** NumPy, Matplotlib, Pybind11 (Futuro).
-- **Herramientas:** VS Code, Git/GitHub, Overleaf.
+- **Herramientas:** VS Code (Agentic Workflows), g++, Git, Overleaf.
+
 
 ## 👥 Colaboradores
 - **[@SiririComun](https://github.com/SiririComun)** - Investigación, Optimización en C++, Econofísica.

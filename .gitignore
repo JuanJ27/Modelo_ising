@@ -239,5 +239,14 @@ bin/
 # Ignore local VS Code settings
 .vscode/
 
-# Ignore compiled binaries (executables)
+# High-Performance Learning Binaries
+# ==============================================================================
+# Ignore specific binaries
 high-performance/learning/01_memory_basics
+high-performance/learning/02_bit_packing
+
+# Ignore all files in the learning folder that DON'T have an extension
+# (This is a pro trick to ignore all compiled binaries in that folder)
+high-performance/learning/*
+!high-performance/learning/*.cpp
+!high-performance/learning/*.md

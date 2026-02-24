@@ -252,3 +252,6 @@ high-performance/learning/04_metropolis_kernel
 high-performance/learning/*
 !high-performance/learning/*.cpp
 !high-performance/learning/*.md
+
+# Production Binary
+ising_sim

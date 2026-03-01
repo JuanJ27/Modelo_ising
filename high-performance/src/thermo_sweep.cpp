@@ -1,13 +1,25 @@
 // =============================================================================
 // thermo_sweep.cpp
-// Phase 2.2: High-Stochastic Ensemble — Mean Observables + Error Bars
+// Phase 2.3: Extreme Parallelization — OpenMP Temperature Sweep
 //
-// UPGRADE FROM PHASE 2.1:
-//   Phase 2.1 produced one Markov-chain time-average per T-point.
-//   Phase 2.2 wraps that single-trial measurement inside an ensemble loop
-//   of NUM_TRIALS independent realizations (each with a distinct RNG seed).
-//   This yields the Standard Error of the Mean (SEM) for every observable,
-//   enabling rigorous error bars on all published data points.
+// UPGRADE FROM PHASE 2.2:
+//   Phase 2.2 executed each T-point serially, spending the full wall time
+//   on ~100 T-points × NUM_TRIALS trials in one sequential stream.
+//   Phase 2.3 introduces OpenMP to distribute T-points across all available
+//   hardware threads. Each thread owns a fully private IsingLattice,
+//   MetropolisEngine, and mt19937_64 RNG — zero shared mutable state during
+//   the Markov chain, so Detailed Balance and ergodicity are preserved
+//   exactly as in the serial Phase 2.2 code.
+//
+// PARALLELISM STRATEGY:
+//   Target loop : outer temperature loop (~100 T-points)
+//   Rationale   : T-points are embarrassingly independent — no shared state.
+//   Schedule    : dynamic (critical window T ∈ [2.1,2.4] is ~3× slower due
+//                 to critical slowing-down; dynamic load-balances the hotspot).
+//   Thread safety:
+//     • csv <<  → #pragma omp critical(csv_write)   (ordered disk writes)
+//     • cout << → #pragma omp critical(console_out) (non-garbled progress)
+//   Out-of-order progress output is intentional: it proves live parallelism.
 //
 // ERROR TAXONOMY — two conceptually distinct sources of uncertainty:
 //
@@ -24,10 +36,8 @@
 //        • T_c(L) - T_c(∞) ~ L^{-1/ν}    (critical-point shift)
 //        • χ_max(L)        ~ L^{γ/ν}      (peak divergence cut off at L)
 //        • peak width      ~ L^{-1/ν}     (broader than the thermodynamic limit)
-//      Remedy  : Finite-Size Scaling (FSS) — repeat at multiple L values
-//                and extrapolate using the 2D Ising universality exponents
-//                ν = 1, γ = 7/4, η = 1/4 (Onsager/Kaufman exact).
-//      NOT reported here; FSS is deferred to Phase 2.3.
+//      Remedy  : Finite-Size Scaling (FSS) across multiple L values;
+//                extrapolate using 2D Ising exponents ν=1, γ=7/4, η=1/4.
 //
 // PHYSICS:
 //   Hamiltonian : H = -J * Σ_<i,j> s_i·s_j    (J=1, H_ext=0)
@@ -44,7 +54,7 @@
 //   ΔT = 0.01  for T ∈ [2.1, 2.4]                         (fine — captures singularities)
 //
 // COMPILATION:
-//   g++ -std=c++17 -O3 -I high-performance/src
+//   g++ -std=c++17 -O3 -fopenmp -I high-performance/src
 //       high-performance/src/IsingLattice.cpp
 //       high-performance/src/MetropolisEngine.cpp
 //       high-performance/src/thermo_sweep.cpp
@@ -59,6 +69,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <omp.h>
 #include <random>
 #include <vector>
 
@@ -158,8 +169,9 @@ int main() {
     // Header
     // -------------------------------------------------------------------------
     std::cout << "=========================================================\n";
-    std::cout << "  Ising-Dynamics | Phase 2.2 High-Stochastic Ensemble\n";
-    std::cout << "  2D Square Lattice — FDT Observables + SEM Error Bars\n";
+    std::cout << "  Ising-Dynamics | Phase 2.3 Extreme Parallelization\n";
+    std::cout << "  2D Square Lattice — OpenMP Parallel Temperature Sweep\n";
+    std::cout << "  Hardware threads  = " << omp_get_max_threads() << "\n";
     std::cout << "=========================================================\n";
     std::cout << "  L             = " << L << "  (N = " << N << " sites)\n";
     std::cout << "  Trials/T-pt   = " << NUM_TRIALS    << "  (independent RNG seeds)\n";
@@ -193,8 +205,14 @@ int main() {
     const auto wall_start = std::chrono::high_resolution_clock::now();
 
     // =========================================================================
-    // MAIN TEMPERATURE LOOP
+    // MAIN TEMPERATURE LOOP  — parallelized over T-points (Phase 2.3)
+    //
+    //   schedule(dynamic): compensates for critical-slowing-down near T_c
+    //   where each trial takes ~3× longer than far-from-critical T-points.
+    //   All per-T-point state (lattice, engine, rng, accumulators) is declared
+    //   inside the loop body and is therefore implicitly thread-private.
     // =========================================================================
+    #pragma omp parallel for schedule(dynamic)
     for (std::size_t ti = 0; ti < temps.size(); ++ti) {
         const double T = temps[ti];
 
@@ -338,28 +356,34 @@ int main() {
         const double sem_e    = sem(ens_e,   ens_e2);
         const double sem_cv   = sem(ens_cv,  ens_cv2);
 
-        // Write CSV row — one row per T-point
-        csv << std::scientific << std::setprecision(8)
-            << T          << ","
-            << mean_m     << "," << sem_m   << ","
-            << mean_chi   << "," << sem_chi << ","
-            << mean_e     << "," << sem_e   << ","
-            << mean_cv    << "," << sem_cv  << "\n";
-        csv.flush();  // guarantee data on disk before next T-point
+        // Write CSV row — one row per T-point (thread-safe; rows may be out-of-order)
+        #pragma omp critical(csv_write)
+        {
+            csv << std::scientific << std::setprecision(8)
+                << T          << ","
+                << mean_m     << "," << sem_m   << ","
+                << mean_chi   << "," << sem_chi << ","
+                << mean_e     << "," << sem_e   << ","
+                << mean_cv    << "," << sem_cv  << "\n";
+            csv.flush();  // guarantee data on disk; out-of-order rows expected
+        }
 
-        // Progress line
+        // Progress line (out-of-order output is intentional — proves live parallelism)
         const double elapsed = std::chrono::duration<double>(
             std::chrono::high_resolution_clock::now() - wall_start
         ).count();
 
-        std::cout << "  [" << std::setw(3) << (ti + 1) << "/" << temps.size() << "]"
-                  << "  T=" << std::fixed      << std::setprecision(3) << T
-                  << "  <|m|>="  << std::setprecision(4) << mean_absm
-                  << "  ±"       << std::setprecision(4) << sem(ens_absm, ens_absm2)
-                  << "  chi="    << std::setprecision(2) << mean_chi
-                  << "  ±"       << std::setprecision(2) << sem_chi
-                  << "  t="      << std::setprecision(0) << elapsed << "s\n";
-        std::cout.flush();
+        #pragma omp critical(console_out)
+        {
+            std::cout << "  [" << std::setw(3) << (ti + 1) << "/" << temps.size() << "]"
+                      << "  T=" << std::fixed      << std::setprecision(3) << T
+                      << "  <|m|>="  << std::setprecision(4) << mean_absm
+                      << "  ±"       << std::setprecision(4) << sem(ens_absm, ens_absm2)
+                      << "  chi="    << std::setprecision(2) << mean_chi
+                      << "  ±"       << std::setprecision(2) << sem_chi
+                      << "  t="      << std::setprecision(0) << elapsed << "s\n";
+            std::cout.flush();
+        }
     }
 
     const double total_s = std::chrono::duration<double>(

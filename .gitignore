@@ -255,3 +255,7 @@ high-performance/learning/*
 
 # Production Binary
 ising_sim
+
+# Ignore Phase 2.1 specific files
+thermo_sweep
+production_data.csv

@@ -1,19 +1,43 @@
 // =============================================================================
 // thermo_sweep.cpp
-// Phase 2.1: Thermodynamic Validation — Data Generation Pipeline
+// Phase 2.2: High-Stochastic Ensemble — Mean Observables + Error Bars
 //
-// PURPOSE:
-//   Drive the modular C++ engine through a temperature sweep and measure
-//   thermodynamic observables using the Fluctuation-Dissipation Theorem (FDT).
-//   Outputs a production-ready CSV for downstream phase-transition analysis
-//   and comparison with the Onsager exact solution.
+// UPGRADE FROM PHASE 2.1:
+//   Phase 2.1 produced one Markov-chain time-average per T-point.
+//   Phase 2.2 wraps that single-trial measurement inside an ensemble loop
+//   of NUM_TRIALS independent realizations (each with a distinct RNG seed).
+//   This yields the Standard Error of the Mean (SEM) for every observable,
+//   enabling rigorous error bars on all published data points.
+//
+// ERROR TAXONOMY — two conceptually distinct sources of uncertainty:
+//
+//   1. STATISTICAL UNCERTAINTY  (reducible, stochastic)
+//      Origin  : finite Markov-chain length and finite number of trials.
+//      Scaling : SEM ∝ 1/√(NUM_TRIALS · PROD_SWEEPS).
+//      Remedy  : increase NUM_TRIALS or PROD_SWEEPS.
+//      Reported: as ±error columns in the CSV (m_err, chi_err, e_err, cv_err).
+//
+//   2. SYSTEMATIC ERROR  (irreducible at fixed L, deterministic)
+//      Origin  : finite-size effects — the correlation-length ξ is bounded
+//                by the box size L, so observables shift from their L→∞ limits.
+//      Manifestations:
+//        • T_c(L) - T_c(∞) ~ L^{-1/ν}    (critical-point shift)
+//        • χ_max(L)        ~ L^{γ/ν}      (peak divergence cut off at L)
+//        • peak width      ~ L^{-1/ν}     (broader than the thermodynamic limit)
+//      Remedy  : Finite-Size Scaling (FSS) — repeat at multiple L values
+//                and extrapolate using the 2D Ising universality exponents
+//                ν = 1, γ = 7/4, η = 1/4 (Onsager/Kaufman exact).
+//      NOT reported here; FSS is deferred to Phase 2.3.
 //
 // PHYSICS:
 //   Hamiltonian : H = -J * Σ_<i,j> s_i·s_j    (J=1, H_ext=0)
 //   Observables : ⟨|m|⟩, χ, ⟨e⟩, Cv
-//   FDT:
-//     Cv   = N/T² * (⟨e²⟩ − ⟨e⟩²)      [intensive: divides by N internally]
+//   FDT (per trial, from time-average moments):
+//     Cv   = N/T² * (⟨e²⟩ − ⟨e⟩²)
 //     χ    = N/T  * (⟨m²⟩ − ⟨|m|⟩²)
+//   SEM (across NUM_TRIALS trials):
+//     SEM(X) = σ(X) / √NUM_TRIALS
+//            where σ²(X) = (1/K) Σ_k X_k² − [(1/K) Σ_k X_k]²
 //
 // T_SCHEDULE:
 //   ΔT = 0.05  for T ∈ [1.0, 2.1)  and T ∈ (2.4, 4.0]   (coarse)
@@ -112,140 +136,228 @@ std::vector<double> make_temperature_schedule() {
 } // namespace
 
 int main() {
-    constexpr int   L             = 100;
-    constexpr int   N             = L * L;       // 10,000 sites
-    constexpr int   WARMUP_SWEEPS = 2000;
-    constexpr int   PROD_SWEEPS   = 10000;
+    // =========================================================================
+    // SIMULATION PARAMETERS
+    //
+    //   Validation run  : L=50,  NUM_TRIALS=5   (~2-3 min,  verify CSV format)
+    //   Production run  : L=100, NUM_TRIALS=10  (~2 h,      publication data)
+    // =========================================================================
+    constexpr int    L             = 50;    // ← SET TO 100 FOR PRODUCTION
+    constexpr int    N             = L * L;
+    constexpr int    NUM_TRIALS    = 5;     // ← SET TO 10  FOR PRODUCTION
+    constexpr int    WARMUP_SWEEPS = 2000;
+    constexpr int    PROD_SWEEPS   = 10000;
 
-    // T_CRIT (Onsager exact): 2/ln(1+√2)
-    constexpr double T_CRIT = 2.2691853;
+    constexpr double T_CRIT  = 2.2691853;  // Onsager exact: 2/ln(1+√2)
+    constexpr double INV_P   = 1.0 / static_cast<double>(PROD_SWEEPS);
+    constexpr double INV_K   = 1.0 / static_cast<double>(NUM_TRIALS);
 
     const char* CSV_PATH = "high-performance/src/production_data.csv";
 
     // -------------------------------------------------------------------------
     // Header
     // -------------------------------------------------------------------------
-    std::cout << "=======================================================\n";
-    std::cout << "  Ising-Dynamics | Phase 2.1 Thermodynamic Sweep\n";
-    std::cout << "  2D Square Lattice — Fluctuation-Dissipation Pipeline\n";
-    std::cout << "=======================================================\n";
+    std::cout << "=========================================================\n";
+    std::cout << "  Ising-Dynamics | Phase 2.2 High-Stochastic Ensemble\n";
+    std::cout << "  2D Square Lattice — FDT Observables + SEM Error Bars\n";
+    std::cout << "=========================================================\n";
     std::cout << "  L             = " << L << "  (N = " << N << " sites)\n";
-    std::cout << "  Warm-up       = " << WARMUP_SWEEPS << " sweeps  (discarded)\n";
-    std::cout << "  Production    = " << PROD_SWEEPS   << " sweeps  (measured)\n";
+    std::cout << "  Trials/T-pt   = " << NUM_TRIALS    << "  (independent RNG seeds)\n";
+    std::cout << "  Warm-up       = " << WARMUP_SWEEPS << " sweeps  (discarded per trial)\n";
+    std::cout << "  Production    = " << PROD_SWEEPS   << " sweeps  (measured per trial)\n";
     std::cout << "  T_crit(exact) = " << T_CRIT        << "\n";
     std::cout << "  Output        -> " << CSV_PATH << "\n";
 
     const auto temps = make_temperature_schedule();
-    std::cout << "  T-points      = " << temps.size() << "\n\n";
+    std::cout << "  T-points      = " << temps.size() << "\n";
+    std::cout << "  Total sweeps  = "
+              << static_cast<long long>(temps.size()) * NUM_TRIALS
+                 * (WARMUP_SWEEPS + PROD_SWEEPS)
+              << "\n\n";
 
     // -------------------------------------------------------------------------
-    // Open CSV
+    // Open CSV — Phase 2.2 schema includes SEM columns
     // -------------------------------------------------------------------------
     std::ofstream csv(CSV_PATH);
     if (!csv.is_open()) {
         std::cerr << "ERROR: cannot open " << CSV_PATH << "\n";
         return 1;
     }
-    csv << "T,m_avg,m_abs_avg,chi,e_avg,cv\n";
+    // Schema: mean ± SEM for every FDT observable.
+    // m_avg  / m_err  : signed magnetisation per site
+    // chi    / chi_err: magnetic susceptibility per site (FDT)
+    // e_avg  / e_err  : energy per site
+    // cv     / cv_err : specific heat per site (FDT)
+    csv << "T,m_avg,m_err,chi,chi_err,e_avg,e_err,cv,cv_err\n";
 
     const auto wall_start = std::chrono::high_resolution_clock::now();
 
-    // -------------------------------------------------------------------------
-    // Main temperature loop
-    // -------------------------------------------------------------------------
+    // =========================================================================
+    // MAIN TEMPERATURE LOOP
+    // =========================================================================
     for (std::size_t ti = 0; ti < temps.size(); ++ti) {
-        const double T  = temps[ti];
-
-        // Fresh ordered lattice at each T.
-        // Starting from the all-+1 ferromagnetic state is intentional:
-        //   T < T_c : system stays ordered → warm-up confines it to one domain.
-        //   T > T_c : warm-up disorders the lattice into the paramagnetic phase.
-        // This gives faster equilibration than a random start at low T.
-        ising::hp::IsingLattice   lattice(L, ising::hp::IsingLattice::Topology::Square2D, +1);
-        ising::hp::MetropolisEngine engine(lattice, T, 1.0);
-
-        // Seed independently per T to remove inter-temperature RNG correlations.
-        std::random_device rd;
-        std::mt19937_64 rng(
-            (static_cast<std::uint64_t>(rd()) << 32) | static_cast<std::uint64_t>(rd())
-        );
+        const double T = temps[ti];
 
         // -----------------------------------------------------------------
-        // THERMALIZATION (warm-up) — data NOT recorded
+        // ENSEMBLE ACCUMULATORS  (first- and second-moment across trials)
         //
-        //   Scientific necessity: the Markov chain must reach stationarity
-        //   before observables can represent the equilibrium ensemble.
-        //   Sweeps during warm-up are systematically biased by the initial
-        //   condition (all spins +1) and cannot enter any ensemble average
-        //   without violating the ergodic hypothesis.
+        //   For observable X ∈ {m_abs, chi, e, cv}:
+        //     ens_X  accumulates Σ_k X_k
+        //     ens_X2 accumulates Σ_k X_k²
+        //   allowing exact computation of σ²(X) = ⟨X²⟩ − ⟨X⟩²
+        //   and SEM = σ(X)/√K  with K = NUM_TRIALS.
         // -----------------------------------------------------------------
-        for (int s = 0; s < WARMUP_SWEEPS; ++s)
-            engine.sweep(rng);
+        double ens_m    = 0.0, ens_m2    = 0.0;  // signed ⟨m⟩
+        double ens_absm = 0.0, ens_absm2 = 0.0;  // ⟨|m|⟩
+        double ens_chi  = 0.0, ens_chi2  = 0.0;
+        double ens_e    = 0.0, ens_e2    = 0.0;
+        double ens_cv   = 0.0, ens_cv2   = 0.0;
+
+        // =================================================================
+        // TRIAL LOOP — NUM_TRIALS independent Markov chains at this T
+        // =================================================================
+        for (int trial = 0; trial < NUM_TRIALS; ++trial) {
+
+            // -----------------------------------------------------------
+            // Fresh ordered lattice for every trial.
+            //
+            //   STATISTICAL UNCERTAINTY perspective:
+            //   Each trial draws an independent path through phase space.
+            //   Starting from an ordered state provides a deterministic and
+            //   reproducible reference point; the warm-up phase then drives
+            //   the chain to the equilibrium distribution regardless of T.
+            //
+            //   SYSTEMATIC ERROR perspective:
+            //   The ordered initial condition introduces a positive-magnetisation
+            //   bias that persists for ~ξ² sweeps (ξ = correlation length).
+            //   WARMUP_SWEEPS = 2000 is sufficient for L=100 everywhere except
+            //   very close to T_c where ξ → L (critical slowing-down).
+            //   This residual bias is a finite-size systematic, not reduced
+            //   by increasing NUM_TRIALS; only a longer warm-up or a
+            //   cluster algorithm (Wolff/Swendsen-Wang) cures it.
+            // -----------------------------------------------------------
+            ising::hp::IsingLattice    lattice(L, ising::hp::IsingLattice::Topology::Square2D, +1);
+            ising::hp::MetropolisEngine engine(lattice, T, 1.0);
+
+            // Unique 64-bit seed per trial via hardware entropy source.
+            // Combining two 32-bit words avoids period truncation on
+            // platforms where std::random_device returns 32-bit values.
+            std::random_device rd;
+            std::mt19937_64 rng(
+                (static_cast<std::uint64_t>(rd()) << 32)
+                | static_cast<std::uint64_t>(rd())
+            );
+
+            // -------------------------------------------------------
+            // THERMALIZATION — equilibrate the Markov chain
+            // -------------------------------------------------------
+            for (int s = 0; s < WARMUP_SWEEPS; ++s)
+                engine.sweep(rng);
+
+            // -------------------------------------------------------
+            // PRODUCTION — accumulate single-trial time-average moments
+            // -------------------------------------------------------
+            double sum_e    = 0.0, sum_e2   = 0.0;
+            double sum_m    = 0.0, sum_absm = 0.0, sum_m2 = 0.0;
+
+            for (int s = 0; s < PROD_SWEEPS; ++s) {
+                engine.sweep(rng);
+
+                const double e    = energy_per_site(lattice);
+                const double m    = magnetization_per_site(lattice);
+                const double absm = std::abs(m);
+
+                sum_e    += e;
+                sum_e2   += e * e;
+                sum_m    += m;
+                sum_absm += absm;
+                sum_m2   += m * m;
+            }
+
+            // -------------------------------------------------------
+            // Single-trial FDT observables
+            //
+            //   These are time-averages over PROD_SWEEPS snapshots.
+            //   Fluctuation-Dissipation Theorem (canonical ensemble):
+            //     Cv = N/T² · (⟨e²⟩_t − ⟨e⟩_t²)
+            //     χ  = N/T  · (⟨m²⟩_t − ⟨|m|⟩_t²)
+            // -------------------------------------------------------
+            const double avg_e    = sum_e    * INV_P;
+            const double avg_e2   = sum_e2   * INV_P;
+            const double avg_m    = sum_m    * INV_P;
+            const double avg_absm = sum_absm * INV_P;
+            const double avg_m2   = sum_m2   * INV_P;
+
+            const double trial_cv  = static_cast<double>(N) / (T * T)
+                                     * (avg_e2  - avg_e    * avg_e);
+            const double trial_chi = static_cast<double>(N) / T
+                                     * (avg_m2  - avg_absm * avg_absm);
+
+            // -------------------------------------------------------
+            // Accumulate into ensemble first- and second-moments
+            // -------------------------------------------------------
+            ens_m    += avg_m;      ens_m2    += avg_m    * avg_m;
+            ens_absm += avg_absm;   ens_absm2 += avg_absm * avg_absm;
+            ens_chi  += trial_chi;  ens_chi2  += trial_chi * trial_chi;
+            ens_e    += avg_e;      ens_e2    += avg_e    * avg_e;
+            ens_cv   += trial_cv;   ens_cv2   += trial_cv * trial_cv;
+
+        } // end trial loop
 
         // -----------------------------------------------------------------
-        // PRODUCTION MEASUREMENT — accumulate moments
+        // ENSEMBLE MEAN
         // -----------------------------------------------------------------
-        double sum_e    = 0.0, sum_e2   = 0.0;
-        double sum_m    = 0.0, sum_absm = 0.0, sum_m2 = 0.0;
-
-        for (int s = 0; s < PROD_SWEEPS; ++s) {
-            engine.sweep(rng);
-
-            const double e    = energy_per_site(lattice);
-            const double m    = magnetization_per_site(lattice);
-            const double absm = std::abs(m);
-
-            sum_e    += e;
-            sum_e2   += e * e;
-            sum_m    += m;
-            sum_absm += absm;
-            sum_m2   += m * m;
-        }
+        const double mean_m    = ens_m    * INV_K;
+        const double mean_absm = ens_absm * INV_K;
+        const double mean_chi  = ens_chi  * INV_K;
+        const double mean_e    = ens_e    * INV_K;
+        const double mean_cv   = ens_cv   * INV_K;
 
         // -----------------------------------------------------------------
-        // Ensemble averages
-        // -----------------------------------------------------------------
-        const double inv_P  = 1.0 / static_cast<double>(PROD_SWEEPS);
-        const double avg_e    = sum_e    * inv_P;
-        const double avg_e2   = sum_e2   * inv_P;
-        const double avg_m    = sum_m    * inv_P;
-        const double avg_absm = sum_absm * inv_P;
-        const double avg_m2   = sum_m2   * inv_P;
-
-        // -----------------------------------------------------------------
-        // Fluctuation-Dissipation Theorem
+        // STANDARD ERROR OF THE MEAN (SEM)
         //
-        //   Specific heat (per site):
-        //     Cv = N/T² * (⟨e²⟩ − ⟨e⟩²)
-        //   Magnetic susceptibility (per site):
-        //     χ  = N/T  * (⟨m²⟩ − ⟨|m|⟩²)
+        //   Variance of the sample:  σ²(X) = ⟨X²⟩_K − ⟨X⟩_K²
+        //   SEM = σ(X) / √K
         //
-        //   Note: using ⟨|m|⟩ rather than ⟨m⟩ for χ removes the
-        //   cancellation from spin-flip domain symmetry at T near T_c.
+        //   Physical meaning:
+        //   SEM tells you how precisely the mean is known given K trials.
+        //   SEM → 0 as K → ∞  (statistical uncertainty is reducible).
+        //   SEM does NOT capture the finite-size bias — that is systematic.
+        //
+        //   Guard against rounding-induced negative variance with max(0,·).
         // -----------------------------------------------------------------
-        const double cv  = static_cast<double>(N) / (T * T) * (avg_e2  - avg_e    * avg_e);
-        const double chi = static_cast<double>(N) / T       * (avg_m2  - avg_absm * avg_absm);
+        auto sem = [&](double sum_x, double sum_x2) -> double {
+            const double mean_x  = sum_x  * INV_K;
+            const double mean_x2 = sum_x2 * INV_K;
+            const double var     = std::max(0.0, mean_x2 - mean_x * mean_x);
+            return std::sqrt(var * INV_K);   // σ / √K
+        };
 
-        // Write row
+        const double sem_m    = sem(ens_m,   ens_m2);
+        const double sem_chi  = sem(ens_chi, ens_chi2);
+        const double sem_e    = sem(ens_e,   ens_e2);
+        const double sem_cv   = sem(ens_cv,  ens_cv2);
+
+        // Write CSV row — one row per T-point
         csv << std::scientific << std::setprecision(8)
-            << T       << ","
-            << avg_m   << ","
-            << avg_absm << ","
-            << chi     << ","
-            << avg_e   << ","
-            << cv      << "\n";
-        csv.flush();   // guarantee data on disk after each T-point
+            << T          << ","
+            << mean_m     << "," << sem_m   << ","
+            << mean_chi   << "," << sem_chi << ","
+            << mean_e     << "," << sem_e   << ","
+            << mean_cv    << "," << sem_cv  << "\n";
+        csv.flush();  // guarantee data on disk before next T-point
 
-        // Progress to stdout
+        // Progress line
         const double elapsed = std::chrono::duration<double>(
             std::chrono::high_resolution_clock::now() - wall_start
         ).count();
 
         std::cout << "  [" << std::setw(3) << (ti + 1) << "/" << temps.size() << "]"
-                  << "  T=" << std::fixed << std::setprecision(3) << T
-                  << "  <|m|>="  << std::setprecision(4) << avg_absm
-                  << "  chi="    << std::setprecision(2) << chi
-                  << "  cv="     << std::setprecision(2) << cv
+                  << "  T=" << std::fixed      << std::setprecision(3) << T
+                  << "  <|m|>="  << std::setprecision(4) << mean_absm
+                  << "  ±"       << std::setprecision(4) << sem(ens_absm, ens_absm2)
+                  << "  chi="    << std::setprecision(2) << mean_chi
+                  << "  ±"       << std::setprecision(2) << sem_chi
                   << "  t="      << std::setprecision(0) << elapsed << "s\n";
         std::cout.flush();
     }
@@ -257,7 +369,7 @@ int main() {
     std::cout << "\n  Done. Total wall time : "
               << std::fixed << std::setprecision(1) << total_s << " s\n";
     std::cout << "  CSV written to       : " << CSV_PATH << "\n";
-    std::cout << "=======================================================\n";
+    std::cout << "=========================================================\n";
 
     return 0;
 }

@@ -142,9 +142,9 @@ int main() {
     //   Validation run  : L=50,  NUM_TRIALS=5   (~2-3 min,  verify CSV format)
     //   Production run  : L=100, NUM_TRIALS=10  (~2 h,      publication data)
     // =========================================================================
-    constexpr int    L             = 50;    // ← SET TO 100 FOR PRODUCTION
+    constexpr int    L             = 100;    // ← SET TO 100 FOR PRODUCTION
     constexpr int    N             = L * L;
-    constexpr int    NUM_TRIALS    = 5;     // ← SET TO 10  FOR PRODUCTION
+    constexpr int    NUM_TRIALS    = 10;     // ← SET TO 10  FOR PRODUCTION
     constexpr int    WARMUP_SWEEPS = 2000;
     constexpr int    PROD_SWEEPS   = 10000;
 

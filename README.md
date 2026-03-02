@@ -34,17 +34,29 @@ This project explores the universality of the **Ising Model**, evolving from a c
 *   **Fluctuation-Dissipation Theorem (FDT):** Computed Specific Heat ($C_v$) and Magnetic Susceptibility ($\chi$) using precise variance measurements of the Markov Chain.
 *   **Publication-Quality Visualizations:** Extracted Standard Error of the Mean (SEM) to generate rigorous, Nature/Science-grade plots of the phase transition.
 
-### [v2.3] Extreme Parallelization 
+### [v2.3] Extreme Parallelization ✅ COMPLETED
 *Maximizing hardware utilization via multi-threading.*
 *   **Objective:** Parallelize the temperature sweep to scale across all available CPU cores.
 *   **Achievement:** Successfully implemented **OpenMP** directives, achieving near-100% utilization of a 12-thread Intel i7 processor.
+*   **Performance Baseline:** **~0.0126 GF/s** (single-thread random Metropolis on L=1024) — established as the CPU reference for GPU comparison.
 *   **Impact:** Reduced simulation wall-clock time by ~8x, enabling high-resolution ensemble sweeps in minutes instead of hours.
 
-### [v2.4] Infrastructure & Reproducibility (In Progress)
-*Containerizing the HPC pipeline for universal deployment.*
-*   **Objective:** Eliminate "Environment Drift" and toolchain conflicts by isolating the C++/CUDA stack.
-*   **Solution:** Developing a **Dockerized HPC environment** based on Ubuntu 22.04 LTS. This ensures that the high-performance kernels run identically on local hardware, cloud instances, or research clusters.
-*   **Impact:** Simplifies the "GTX 1050 Ti to Modern OS" bridge, providing a stable sandbox for GPU-accelerated research.
+### [v2.4] Infrastructure & Reproducibility ✅ COMPLETED
+*Containerized GPU benchmark delivering a ~152,000x speedup over the Python baseline.*
+*   **Problem Solved:** Fedora 43 ships `glibc 2.40`, which conflicts with all CUDA ≤ 12.9 device math headers (`cospi/sinpi/rsqrt noexcept` mismatch under cudafe++). No flag-level workaround exists — the fix requires a controlled OS environment.
+*   **Solution:** Containerized the full CUDA pipeline using **Docker (`nvidia/cuda:12.6.2-devel-ubuntu22.04`)**, providing a stable `glibc 2.35` baseline compatible with CUDA 12.6 and Pascal hardware.
+*   **GPU Algorithm:** **Red-Black (Checkerboard) Metropolis** — allows all N/2 sites of one sublattice to update in parallel with zero data hazards, preserving Detailed Balance.
+*   **RNG:** Inline **xorshift64\*** (Vigna 2014) — passes BigCrush, register-only, zero external header dependencies.
+*   **🏆 Benchmark Result — GTX 1050 Ti (sm\_61, Pascal, 768 CUDA cores):**
+
+    | Metric | Value |
+    |---|---|
+    | Lattice | L=1024 (N=1,048,576 sites) |
+    | Sweeps | 1,000 |
+    | Temperature | T=2.269 (≈ Tc) |
+    | **Throughput** | **~1.92 GigaFlips/second** |
+    | vs CPU baseline (v2.3, 0.0126 GF/s) | **~152× faster** |
+    | vs Python baseline (v1.0) | **~152,000× faster** |
 
 ### [v3.0] Econophysics: Market Sentiment Analysis (Planned)
 *Targeting Financial Industry applications (Bancolombia Talento B).*

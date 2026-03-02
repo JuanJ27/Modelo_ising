@@ -253,8 +253,9 @@ high-performance/learning/*
 !high-performance/learning/*.cpp
 !high-performance/learning/*.md
 
-# Production Binary
+# Production Binaries
 ising_sim
+ising_cuda
 
 # Ignore Phase 2.1 specific files
 thermo_sweep

@@ -19,7 +19,7 @@ services:
     # Mount the entire project into the container so edits on the host
     # are immediately visible inside without rebuilding the image.
     volumes:
-      - .:/app/Ising-Dynamics
+      - .:/app/Ising-Dynamics:Z
 
     # Pass the NVIDIA GTX 1050 Ti (or any available GPU) into the container.
     # Requires the NVIDIA Container Toolkit on the host (nvidia-ctk).

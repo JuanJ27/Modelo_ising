@@ -1,3 +1,36 @@
-# docker-compose.yml — Ising-Dynamics HPC Environment
-# Phase 2.4: Dockerized HPC Environment
-# Populated in Phase 2.4.2
+# =============================================================================
+# Ising-Dynamics — Docker Compose Orchestration
+# Phase 2.4 — Dockerized GPU Benchmark Lab
+#
+# Usage:
+#   docker compose build           # Build the ising-lab image
+#   docker compose run ising-lab   # Interactive shell with GPU access
+#   docker compose run ising-lab bash -c "<compile + run command>"
+# =============================================================================
+
+services:
+  ising-lab:
+    build:
+      context: .                                    # Project root (access to all src/)
+      dockerfile: high-performance/infrastructure/Dockerfile
+
+    image: ising-dynamics:cuda12.6-ubuntu22.04
+
+    # Mount the entire project into the container so edits on the host
+    # are immediately visible inside without rebuilding the image.
+    volumes:
+      - .:/app/Ising-Dynamics
+
+    # Pass the NVIDIA GTX 1050 Ti (or any available GPU) into the container.
+    # Requires the NVIDIA Container Toolkit on the host (nvidia-ctk).
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+    # Keep stdin open for interactive benchmark sessions
+    stdin_open: true
+    tty: true

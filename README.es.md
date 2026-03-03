@@ -57,46 +57,52 @@ Este proyecto explora la universalidad del **Modelo de Ising**, evolucionando de
     | vs CPU (v2.3, 0.0126 GF/s) | **~152× más rápido** |
     | vs Python (v1.0) | **~152,000× más rápido** |
 
-### [v3.0] Econofísica: Análisis de Sentimiento de Mercado (Planeado)
-*Dirigido a aplicaciones en la industria financiera.*
-*   **Objetivo:** Mapear la dinámica de Ising a series de tiempo financieras para detectar "Comportamiento de Rebaño" (Herd Behavior) y volatilidad de mercado.
-*   **Hipótesis:** Utilizar la Temperatura Crítica ($T_c$) del sistema para identificar transiciones de fase en el sentimiento de los inversores, como predictor de crisis.
+### [v2.6.0] Hito: Obra Maestra Científica ✅ COMPLETADO
+*Validación FSS completa — la prueba definitiva del motor de física en GPU.*
+*   **Rendimiento Máximo:** **2.09 GF/s** en L=1024 (GTX 1050 Ti, sm_61).
+*   **Escala:** $L \in \{64, 128, 256, 512, 1024\}$, $K=15$ ensayos independientes por punto.
+*   **Actualización RNG:** Philox-4×32-10 (CBRNG) — elimina colisiones de periodo en ejecuciones masivamente paralelas.
+*   **Salida Científica:** `Master_FSS_Analysis.ipynb` — Extracción del exponente crítico $\gamma/\nu$ mediante regresión log-log ($R^2=0.993$).
+*   **🏆 Aceleración:** **~152,000× más rápido** que el prototipo original en Python.
+
+### [v3.0] Econofísica: Análisis de Sentimiento de Mercado (En Progreso)
+*Aplicación a la industria financiera — foco primario de desarrollo.*
+*   **Objetivo:** Mapear la dinámica de Ising a series de tiempo financieras para detectar "Comportamiento de Rebaño" (Herd Behavior).
+*   **Hipótesis:** Identificar transiciones de fase en el sentimiento de los inversores como predictor de crisis de mercado.
 *   **Fuente de Datos:** Retornos históricos de la Bolsa de Valores de Colombia (BVC).
 
 ---
 
 ## 🐳 Reproducibilidad (Docker)
 
-El pipeline de benchmark GPU corre dentro de un entorno containerizado para garantizar fidelidad de ejecución en cualquier OS anfitrión.
+Para garantizar una fidelidad de ejecución del 100% en diferentes sistemas operativos anfitriones, el pipeline de benchmark GPU está completamente containerizado. Esto resuelve los conflictos de símbolos de `glibc` encontrados en distribuciones de vanguardia como Fedora 43.
 
 | Componente | Versión Estandarizada | Justificación |
 | :--- | :--- | :--- |
-| **OS Base** | Ubuntu 22.04 LTS | `glibc 2.35` — completamente compatible con los headers de CUDA 12.6 |
-| **CUDA Stack** | 12.6.2 Devel | Compatibilidad verificada con Pascal (`sm_61`) y arquitecturas posteriores |
-| **Compilador** | GCC 11 (Ubuntu defecto) | Dentro del rango de soporte oficial de CUDA 12.6 (≤ GCC 12) |
-| **Runtime GPU** | NVIDIA Container Toolkit | Passthrough directo del hardware GTX/RTX al contenedor |
+| **Base HPC** | Ubuntu 22.04 LTS | Línea base estable de `glibc 2.35` para compatibilidad del toolchain de CUDA. |
+| **Stack CUDA** | 12.6.2 Devel | Soporte nativo para arquitecturas Pascal (`sm_61`) y posteriores. |
+| **Compilador** | GCC 11.x | Dentro del rango de soporte oficial para la estabilidad de CUDA 12.6. |
+| **Runtime** | NVIDIA Container Toolkit| Passthrough directo del hardware GTX/RTX al contenedor. |
 
 ```bash
-# Construir la imagen
+# Construir el entorno HPC estandarizado
 docker compose build
 
-# Entrar al laboratorio con acceso a GPU
-docker compose run ising-lab
-
-# Compilar y ejecutar el benchmark de una sola vez
-docker compose run ising-lab bash -c \
+# Ejecutar el benchmark GPU de alta precisión dentro del contenedor
+docker compose run --rm ising-lab bash -c \
   "nvcc -O3 -arch=sm_61 -Wno-deprecated-gpu-targets \
-   high-performance/src/cuda_kernel.cu -o ising_cuda && ./ising_cuda"
+   high-performance/src/fss_sweep.cu -o fss_sim && ./fss_sim"
 ```
 
 ---
 
 ## 🛠 Stack Tecnológico
-- **Lenguajes:** C++17 (Motor HPC), Python 3.x (Análisis), CUDA (Kernels GPU).
-- **Paralelismo:** OpenMP (Multi-threading), Red-Black Checkerboard (SIMT).
-- **Infraestructura:** Docker, Docker Compose, NVIDIA Container Toolkit.
-- **Ciencia de Datos:** Pandas, Matplotlib, NumPy, Jupyter.
-- **Herramientas:** VS Code (Agentic Workflows), g++, nvcc, Git, Overleaf.
+- **Lenguajes:** C++17 (Núcleo HPC), Python 3.x (Análisis), CUDA (Kernels GPU).
+- **Paralelismo:** OpenMP (Multi-hilo), Red-Black Checkerboard (SIMD/SIMT), Reducciones GPU (Warp-Shuffle).
+- **Infraestructura:** Docker, Docker Compose, NVIDIA Container Toolkit (Passthrough de hardware).
+- **Ciencia de Datos:** Pandas, Matplotlib, NumPy, Jupyter, SciPy (Regresión OLS).
+- **Computación Científica:** Teoría de Escaleo de Tamaño Finito, Teorema de Fluctuación-Disipación, Monte Carlo Metropolis-Hastings.
+
 
 ## 👥 Colaboradores
 - **[@SiririComun](https://github.com/SiririComun)** - Arquitectura HPC, Optimización C++, Ciencia de Datos, Econofísica.

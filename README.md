@@ -19,7 +19,7 @@ This project explores the universality of the **Ising Model**, evolving from a c
     *[Full Scientific Report (PDF)](./foundations/report/Ising_model_Report.pdf)
     *[Technical Presentation (LaTeX Source Included)](./foundations/presentation/presentation.pdf)
 
-### [v2.0] The Modular C++ Engine
+### [v2.0] The Modular C++ Engine ✅ COMPLETED
 *Transitioned from Python Prototype to Production-grade HPC.*
 *   **Architecture:** Full Separation of Concerns (OOD) combined with **Data-Oriented Design (DOD)**.
 *   **Performance Milestone:** Reached throughputs of **~0.0126 GigaFlips per second (GF/s)** (~79 ns/flip including measurement overhead), achieving a **>600x speedup** over the original Python implementation.
@@ -28,7 +28,7 @@ This project explores the universality of the **Ising Model**, evolving from a c
     *   **Optimization:** Precomputed neighbor lookup tables ($O(1)$) and **Boltzmann Lookup Tables (LUT)** to eliminate expensive `std::exp` calls.
     *   **Scientific RNG:** Integrated `std::mt19937_64` (Mersenne Twister) passed by reference to maintain unbroken Markov Chain sequences.
 
-### [v2.2] Thermodynamic Validation & Data Science Frontend
+### [v2.2] Thermodynamic Validation & Data Science Frontend ✅ COMPLETED
 *Decoupled compute backend (C++) from visualization frontend (Python/Jupyter).*
 *   **High-Stochastic Ensemble:** Implemented multi-trial ensemble averaging to mitigate critical slowing down near $T_c$.
 *   **Fluctuation-Dissipation Theorem (FDT):** Computed Specific Heat ($C_v$) and Magnetic Susceptibility ($\chi$) using precise variance measurements of the Markov Chain.
@@ -58,8 +58,16 @@ This project explores the universality of the **Ising Model**, evolving from a c
     | vs CPU baseline (v2.3, 0.0126 GF/s) | **~152× faster** |
     | vs Python baseline (v1.0) | **~152,000× faster** |
 
-### [v3.0] Econophysics: Market Sentiment Analysis (Planned)
-*Targeting Financial Industry applications (Bancolombia Talento B).*
+### [v2.6.0] Scientific Masterpiece Milestone ✅ COMPLETED
+*Full Finite-Size Scaling validation — the definitive proof of the GPU physics engine.*
+*   **Peak Throughput:** **2.09 GF/s** at L=1024 (GTX 1050 Ti, sm_61, Pascal).
+*   **Scale:** $L \in \{64, 128, 256, 512, 1024\}$, $K=15$ independent trials per T-point, 85 T-points each.
+*   **RNG Upgrade:** Philox-4×32-10 counter-based CBRNG (Salmon et al. 2011) — eliminates period-collision artifacts in massively parallel multi-trial runs.
+*   **Scientific Output:** `Master_FSS_Analysis.ipynb` — T_c(L) finite-size shift table, χ_max power-law scaling ($R^2=0.993$), and critical exponent extraction via OLS log-log regression with Onsager reference.
+*   **🏆 Speedup vs Python v1.0 baseline:** **96,000× faster** than the original NumPy prototype for a full FSS sweep workload.
+
+### [v3.0] Econophysics: Market Sentiment Analysis (In Progress)
+*Targeting Financial Industry applications — primary development focus from v2.6.0 onward.*
 *   **Objective:** Map Ising dynamics to financial time-series to detect "Herd Behavior" and market volatility.
 *   **Hypothesis:** Using the Critical Temperature ($T_c$) of the system to identify phase transitions in investor sentiment, acting as a predictor for market crashes.
 
@@ -67,22 +75,33 @@ This project explores the universality of the **Ising Model**, evolving from a c
 
 ## 🐳 Reproducibility (Docker)
 
-To ensure 100% execution fidelity across different host Operating Systems, the GPU benchmark pipeline is fully containerized.
+To ensure 100% execution fidelity across different host Operating Systems, the GPU benchmark pipeline is fully containerized. This resolves the `glibc` symbol conflicts found in bleeding-edge distributions like Fedora 43.
 
 | Component | Standardized Version | Rationale |
 | :--- | :--- | :--- |
-| **HPC Base** | Ubuntu 22.04 LTS | Long-term support with stable ABI/glibc headers. |
-| **CUDA Stack** | 12.6.x Devel | Verified compatibility with Pascal (`sm_61`) and newer architectures. |
-| **Compiler** | GCC 11.x | Industry-standard host compiler for numerical stability. |
-| **Runtime** | Nvidia Container Toolkit | Direct hardware-passthrough for GTX/RTX hardware. |
+| **HPC Base** | Ubuntu 22.04 LTS | Stable `glibc 2.35` baseline for CUDA toolchain compatibility. |
+| **CUDA Stack** | 12.6.2 Devel | Native support for Pascal (`sm_61`) and newer architectures. |
+| **Host Compiler**| GCC 11.x | Within official support range for CUDA 12.6 stability. |
+| **Runtime** | NVIDIA Container Toolkit| Direct hardware-passthrough for GTX/RTX hardware. |
+
+```bash
+# Build the standardized HPC environment
+docker compose build
+
+# Execute the high-precision GPU benchmark inside the container
+docker compose run --rm ising-lab bash -c \
+  "nvcc -O3 -arch=sm_61 -Wno-deprecated-gpu-targets \
+   high-performance/src/fss_sweep.cu -o fss_sim && ./fss_sim"
+```
 
 ---
 
 ## 🛠 Tech Stack
 - **Languages:** C++17 (HPC Core), Python 3.x (Analysis), CUDA (GPU Kernels).
-- **Parallelism:** OpenMP (Multi-threading), Red-Black Checkerboard (SIMT).
-- **Infrastructure:** Docker, Docker Compose, NVIDIA Container Toolkit.
-- **Data Science:** Pandas, Matplotlib, NumPy, Jupyter.
+- **Parallelism:** OpenMP (Multi-threading), Red-Black Checkerboard (SIMD/SIMT), GPU Warp-Shuffle Reductions.
+- **Infrastructure:** Docker, Docker Compose, NVIDIA Container Toolkit (Hardware Passthrough).
+- **Data Science:** Pandas, Matplotlib, NumPy, Jupyter, SciPy (OLS Regression).
+- **Scientific Computing:** Finite-Size Scaling Theory, Fluctuation-Dissipation Theorem, Monte Carlo Metropolis-Hastings.
 
 ## 👥 Contributors
 - **[@SiririComun](https://github.com/SiririComun)** - HPC Architecture, C++ Optimization, Data Science, Econophysics.
